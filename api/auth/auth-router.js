@@ -1,14 +1,17 @@
 const router = require("express").Router();
+const bcrypt = require('bcryptjs');
 const { checkUsernameExists, validateRoleName } = require('./auth-middleware');
 const Users = require('../users/users-model');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require("../secrets"); // use this secret!
 
 router.post("/register", validateRoleName, (req, res, next) => {
-  const { username, password, role_name } = req.body;
-  Users.add(username, password, role_name)
+  const user = req.body;
+  const hash = bcrypt.hashSync(user.password, 10);
+  user.password = hash;
+  Users.add(user)
     .then(user => {
-      res.status(201).json({ user_id: user.user_id, username: username, role_name: role_name })
+      res.status(201).json({ user_id: user.user_id, username: user.username, role_name: user.role_name })
     })
     .catch(next)
   /**
@@ -26,11 +29,11 @@ router.post("/register", validateRoleName, (req, res, next) => {
 
 
 router.post("/login", checkUsernameExists, (req, res, next) => {
-  const { username } = req.body;
+  const { username, password } = req.body;
 
-  Users.findBy({ username }).first()
-    .then(user => {
-      if(user){
+  Users.findBy({ username })
+    .then(([user]) => {
+      if(user && bcrypt.compareSync(password, user.password)){
         const token = generateToken(user);
         res.status(200).json({ message: `${user.username} is back!`, token })
       }else{

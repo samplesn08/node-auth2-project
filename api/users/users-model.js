@@ -48,6 +48,7 @@ function findById(user_id) {
     .join('roles', 'users.role_id', 'roles.role_id')
     .select('users.user_id', 'users.username', 'roles.role_name')
     .where('users.user_id', user_id)
+    .first()
   /**
     You will need to join two tables.
     Resolves to the user with the given user_id.
