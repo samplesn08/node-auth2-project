@@ -41,7 +41,7 @@ const only = role_name => (req, res, next) => {
 
 const checkUsernameExists = (req, res, next) => {
   const { username } = req.body;
-  const nameToCheck = 
+  
   /*
     If the username in req.body does NOT exist in the database
     status 401

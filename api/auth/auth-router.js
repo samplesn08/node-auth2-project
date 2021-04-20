@@ -1,8 +1,16 @@
 const router = require("express").Router();
 const { checkUsernameExists, validateRoleName } = require('./auth-middleware');
+const Users = require('../users/users-model');
+const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require("../secrets"); // use this secret!
 
 router.post("/register", validateRoleName, (req, res, next) => {
+  const { username, password, role_name } = req.body;
+  Users.add(username, password, role_name)
+    .then(user => {
+      res.status(201).json({ user_id: user.user_id, username: username, role_name: role_name })
+    })
+    .catch(next)
   /**
     [POST] /api/auth/register { "username": "anna", "password": "1234", "role_name": "angel" }
 
@@ -18,6 +26,18 @@ router.post("/register", validateRoleName, (req, res, next) => {
 
 
 router.post("/login", checkUsernameExists, (req, res, next) => {
+  const { username } = req.body;
+
+  Users.findBy({ username }).first()
+    .then(user => {
+      if(user){
+        const token = generateToken(user);
+        res.status(200).json({ message: `${user.username} is back!`, token })
+      }else{
+        res.status(401).json({ message: 'Invalid credentials' })
+      }
+    })
+    .catch(next)
   /**
     [POST] /api/auth/login { "username": "sue", "password": "1234" }
 
@@ -38,5 +58,17 @@ router.post("/login", checkUsernameExists, (req, res, next) => {
     }
    */
 });
+
+const generateToken = (user) => {
+  const payload = {
+    subject: user.user_id,
+    username: user.username,
+    role_name: user.role_name
+  };
+  const options = {
+    expiresIn: '1d'
+  };
+  return jwt.sign(payload, JWT_SECRET, options);
+}
 
 module.exports = router;
