@@ -35,7 +35,7 @@ const restricted = (req, res, next) => {
 }
 
 const only = role_name => (req, res, next) => {
-  if(req.decodedToken.role_name === role_name){
+  if(role_name === req.decodedToken.role_name){
     next();
   }else{
     res.status(403).json({ message: "This is not for you" })
@@ -54,9 +54,9 @@ const only = role_name => (req, res, next) => {
 
 
 const checkUsernameExists = async (req, res, next) => {
-  const { username } = req.body;
-  const user = await Users.findBy({ username })
-      if(username === user.username){
+  const [user] = await Users.findBy({ username: req.body.username })
+      if(user){
+        req.user = user
         next()
       }else{
         res.status(401).json({ message: "Invalid credentials" })
@@ -73,17 +73,16 @@ const checkUsernameExists = async (req, res, next) => {
 
 
 const validateRoleName = (req, res, next) => {
-  const roleName = req.body.role_name;
-  if(roleName){
-    req.role_name = roleName.trim();
+  if(!req.body.role_name || !req.body.role_name.trim()){
+    req.body.role_name = 'student'
     next();
-  }else if(!req.role_name || req.role_name === ''){
-    req.role_name = 'student';
-    next();
-  }else if(req.role_name === 'admin'){
+  }else if(req.body.role_name.trim() === 'admin'){
     res.status(422).json({ message: 'Role name can not be admin' })
-  }else if(req.role_name.length > 32){
+  }else if(req.body.role_name.trim().length > 32){
     res.status(422).json({ message: "Role name can not be longer than 32 chars" })
+  }else{
+    req.body.role_name = req.body.role_name.trim()
+    next()
   }
   /*
     If the role_name in the body is valid, set req.role_name to be the trimmed string and proceed.
